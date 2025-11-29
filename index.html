@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prototype Créativité - Onboarding</title>
+    <title>Blueberries.IA - Prototype</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -58,59 +58,140 @@
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
+
+        /* Style pour le retour caméra */
+        #camera-feed-container {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 180px;
+            height: auto;
+            aspect-ratio: 16/9;
+            z-index: 60; /* Au-dessus de tout */
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            transition: all 0.5s ease;
+        }
+        #camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Effet miroir */
+        }
+        
+        /* Animation de secousse pour le refus */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
     </style>
 </head>
 <body class="h-screen w-screen relative text-slate-800">
 
+    <!-- Retour Caméra (Caché au début) -->
+    <div id="camera-feed-container" class="hidden opacity-0 translate-y-[-20px]">
+        <video id="camera-feed" autoplay playsinline muted></video>
+    </div>
+
     <!-- OVERLAY D'ONBOARDING (Les Pop-ups) -->
-    <div id="onboarding-overlay" class="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/40 transition-all duration-500">
+    <div id="onboarding-overlay" class="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-500">
         
         <!-- Conteneur des étapes -->
         <div class="w-full max-w-md p-6 mx-4">
+
+            <!-- ÉTAPE 0: MISE EN CONTEXTE -->
+            <div id="step-context" class="glass-panel rounded-2xl p-8 text-center transform transition-all duration-500">
+                <div class="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-600">
+                    <i class="fas fa-wand-magic-sparkles text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold mb-2">Bienvenue sur Blueberries.IA</h2>
+                <p class="text-slate-500 mb-8 leading-relaxed">
+                    BlueBerries est un prototype d'IA expérimental. Pour fonctionner, il doit pouvoir te voir et t'entendre. La configuration dure moins de 30 secondes.
+                </p>
+                <button onclick="nextStep()" class="w-full px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-lg hover:bg-indigo-700 hover:shadow-indigo-500/30 transition">
+                    C'est parti !
+                </button>
+            </div>
             
             <!-- ÉTAPE 1: CAMERA -->
-            <div id="step-camera" class="glass-panel rounded-2xl p-8 text-center transform transition-all duration-500">
+            <div id="step-camera" class="hidden glass-panel rounded-2xl p-8 text-center transform transition-all duration-500">
                 <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 text-purple-600">
                     <i class="fas fa-camera text-3xl"></i>
                 </div>
                 <h2 class="text-2xl font-bold mb-2">Inspirons-nous de votre vision</h2>
-                <p class="text-slate-500 mb-8">Pour analyser vos croquis et votre environnement créatif, nous avons besoin d'accéder à votre caméra.</p>
-                <div class="flex gap-3 justify-center">
-                    <button onclick="handlePermission('camera', false)" class="px-6 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition">Plus tard</button>
-                    <button onclick="handlePermission('camera', true)" class="px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold shadow-lg hover:bg-purple-700 hover:shadow-purple-500/30 transition">Autoriser l'accès</button>
+                <div id="msg-camera-default">
+                    <p class="text-slate-500 mb-8">Pour analyser tes expressions faciales et tes croquis, j'ai impérativement besoin d'accéder à ta caméra.</p>
+                </div>
+                <div id="msg-camera-refused" class="hidden">
+                    <p class="text-rose-500 font-medium mb-2">Accès requis !</p>
+                    <p class="text-slate-600 text-sm mb-6 bg-rose-50 p-3 rounded-lg border border-rose-100">
+                        "Je comprends ta réticence, mais je suis une IA visuelle. Sans yeux, je ne peux pas voir ce que tu crées ni réagir à tes émotions. C'est essentiel pour continuer."
+                    </p>
+                </div>
+                
+                <div class="flex gap-3 justify-center" id="btns-camera">
+                    <button onclick="handlePermission('camera', false)" class="btn-refuse px-6 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition">Je préfère pas</button>
+                    <button onclick="handlePermission('camera', true)" class="w-full btn-accept px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold shadow-lg hover:bg-purple-700 hover:shadow-purple-500/30 transition">Autoriser l'accès</button>
                 </div>
             </div>
 
-            <!-- ÉTAPE 2: MICRO (Caché au début) -->
+            <!-- ÉTAPE 2: MICRO -->
             <div id="step-mic" class="hidden glass-panel rounded-2xl p-8 text-center transform transition-all duration-500">
                 <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-600">
                     <i class="fas fa-microphone text-3xl"></i>
                 </div>
                 <h2 class="text-2xl font-bold mb-2">Exprimez vos idées</h2>
-                <p class="text-slate-500 mb-8">La créativité passe par la voix. Activez le micro pour brainstormer à voix haute avec l'assistant.</p>
-                <div class="flex gap-3 justify-center">
-                    <button onclick="handlePermission('mic', false)" class="px-6 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition">Plus tard</button>
-                    <button onclick="handlePermission('mic', true)" class="px-6 py-3 rounded-xl bg-rose-600 text-white font-semibold shadow-lg hover:bg-rose-700 hover:shadow-rose-500/30 transition">Activer le micro</button>
+                
+                <div id="msg-mic-default">
+                    <p class="text-slate-500 mb-8">Active ton micro pour brainstormer à voix haute. L'analyse vocale est au cœur de mon système.</p>
+                </div>
+                <div id="msg-mic-refused" class="hidden">
+                    <p class="text-rose-500 font-medium mb-2">On doit pouvoir s'entendre !</p>
+                    <p class="text-slate-600 text-sm mb-6 bg-rose-50 p-3 rounded-lg border border-rose-100">
+                        "L'écrit, c'est bien, mais la spontanéité de la voix est irremplaçable pour la créativité. Promis, je n'écoute que quand tu me parles."
+                    </p>
+                </div>
+
+                <div class="flex gap-3 justify-center" id="btns-mic">
+                    <button onclick="handlePermission('mic', false)" class="btn-refuse px-6 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition">Plus tard</button>
+                    <button onclick="handlePermission('mic', true)" class="w-full btn-accept px-6 py-3 rounded-xl bg-rose-600 text-white font-semibold shadow-lg hover:bg-rose-700 hover:shadow-rose-500/30 transition">Activer le micro</button>
                 </div>
             </div>
 
-            <!-- ÉTAPE 3: NOTIFICATIONS (Caché au début) -->
+            <!-- ÉTAPE 3: NOTIFICATIONS -->
             <div id="step-notif" class="hidden glass-panel rounded-2xl p-8 text-center transform transition-all duration-500">
                 <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600">
                     <i class="fas fa-bell text-3xl"></i>
                 </div>
-                <h2 class="text-2xl font-bold mb-2">Restez inspiré</h2>
-                <p class="text-slate-500 mb-8">Recevez des "étincelles créatives" et des rappels pour vos sessions de brainstorming.</p>
-                <div class="flex gap-3 justify-center">
-                    <button onclick="handlePermission('notif', false)" class="px-6 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition">Non merci</button>
-                    <button onclick="handlePermission('notif', true)" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 hover:shadow-blue-500/30 transition">Autoriser</button>
+                <h2 class="text-2xl font-bold mb-2">Reste inspiré</h2>
+                
+                <div id="msg-notif-default">
+                    <p class="text-slate-500 mb-8">Pour créer une habitude, j'ai besoin de pouvoir t'envoyer des "étincelles créatives" au bon moment.</p>
+                </div>
+                <div id="msg-notif-refused" class="hidden">
+                    <p class="text-rose-500 font-medium mb-2">Dernier petit effort !</p>
+                    <p class="text-slate-600 text-sm mb-6 bg-rose-50 p-3 rounded-lg border border-rose-100">
+                        "La créativité ne se commande pas, elle se provoque. Si je ne peux pas te notifier, je perds 50% de mon utilité de coach. Allez, c'est la dernière étape !"
+                    </p>
+                </div>
+
+                <div class="flex gap-3 justify-center" id="btns-notif">
+                    <button onclick="handlePermission('notif', false)" class="btn-refuse px-6 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition">Non merci</button>
+                    <button onclick="handlePermission('notif', true)" class="w-full btn-accept px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 hover:shadow-blue-500/30 transition">Autoriser</button>
                 </div>
             </div>
 
         </div>
     </div>
 
-    <!-- INTERFACE PRINCIPALE (Floutée ou cachée pendant l'onboarding) -->
+    <!-- INTERFACE PRINCIPALE -->
     <div id="main-app" class="h-full flex flex-col bg-white transition-opacity duration-1000 opacity-0 blur-sm">
         
         <!-- Header -->
@@ -120,21 +201,21 @@
                     <i class="fas fa-lightbulb"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-slate-800">Muse</h1>
+                    <h1 class="font-bold text-slate-800">Blueberries.AI</h1>
                     <div class="flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         <span class="text-xs text-slate-500 font-medium">En ligne & Créative</span>
                     </div>
                 </div>
             </div>
-            <div class="flex gap-4 text-slate-400">
+            <div class="flex gap-4 text-slate-400 mr-48"> 
                 <button class="hover:text-purple-600 transition" title="Settings"><i class="fas fa-cog"></i></button>
             </div>
         </header>
 
         <!-- Zone de Chat -->
         <div id="chat-container" class="flex-1 overflow-y-auto p-6 space-y-6 chat-scroll bg-slate-50">
-            <!-- Les messages seront insérés ici par JS -->
+            <!-- Messages injectés par JS -->
         </div>
 
         <!-- Zone de Saisie -->
@@ -149,7 +230,7 @@
                 </button>
             </div>
             <div class="text-center mt-2">
-                <p class="text-xs text-slate-400">Muse IA peut faire des erreurs. Vérifiez les informations importantes.</p>
+                <p class="text-xs text-slate-400">Blueberries peut faire des erreurs. Vérifiez les informations importantes.</p>
             </div>
         </div>
     </div>
@@ -158,59 +239,82 @@
     <script>
         // --- GESTION DE L'ONBOARDING ---
 
-        const steps = ['camera', 'mic', 'notif'];
+        const steps = ['context', 'camera', 'mic', 'notif'];
         let currentStepIndex = 0;
 
         function showStep(index) {
-            // Cacher toutes les étapes
             steps.forEach(step => {
                 const el = document.getElementById(`step-${step}`);
-                el.classList.add('hidden');
-                el.classList.remove('block');
+                if(el) {
+                    el.classList.add('hidden');
+                    el.classList.remove('block');
+                }
             });
 
-            // Si on a fini les étapes
             if (index >= steps.length) {
                 finishOnboarding();
                 return;
             }
 
-            // Afficher l'étape actuelle avec une petite animation
             const currentEl = document.getElementById(`step-${steps[index]}`);
-            currentEl.classList.remove('hidden');
-            currentEl.classList.add('block', 'message-enter');
+            if (currentEl) {
+                currentEl.classList.remove('hidden');
+                currentEl.classList.add('block', 'message-enter');
+            }
         }
 
         async function handlePermission(type, allowed) {
             const currentEl = document.getElementById(`step-${type}`);
             
-            // Simulation d'une petite attente ou appel API réel
-            if (allowed) {
-                // Changer le texte du bouton pour montrer le chargement
-                const btn = currentEl.querySelector('button:last-child');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                
-                try {
-                    if (type === 'camera') {
-                        // Tentative réelle (peut échouer dans une iframe, on catch l'erreur)
-                        await navigator.mediaDevices.getUserMedia({ video: true });
-                    } else if (type === 'mic') {
-                        await navigator.mediaDevices.getUserMedia({ audio: true });
-                    } else if (type === 'notif') {
-                        await Notification.requestPermission();
-                    }
-                } catch (e) {
-                    console.log("Permission simulée ou bloquée par l'iframe", e);
+            // CAS DE REFUS (OBLIGATOIRE MAINTENANT)
+            if (!allowed) {
+                // Animation de secousse pour indiquer l'erreur
+                currentEl.classList.remove('message-enter');
+                void currentEl.offsetWidth; // Trigger reflow
+                currentEl.classList.add('shake');
+
+                // Cacher le message par défaut
+                const defaultMsg = document.getElementById(`msg-${type}-default`);
+                if(defaultMsg) defaultMsg.classList.add('hidden');
+
+                // Afficher l'argument persuasif
+                const refusedMsg = document.getElementById(`msg-${type}-refused`);
+                if(refusedMsg) {
+                    refusedMsg.classList.remove('hidden');
+                    refusedMsg.classList.add('message-enter');
                 }
+
+                // Cacher le bouton de refus pour forcer l'acceptation
+                const btnContainer = document.getElementById(`btns-${type}`);
+                const refuseBtn = btnContainer.querySelector('.btn-refuse');
+                if(refuseBtn) refuseBtn.style.display = 'none';
                 
-                // Petit délai pour l'UX
-                setTimeout(() => {
-                    nextStep();
-                }, 800);
-            } else {
-                nextStep();
+                return; // ON ARRÊTE LA FONCTION ICI, on ne passe pas à la suite
             }
+
+            // CAS D'ACCEPTATION
+            const btn = currentEl.querySelector('.btn-accept');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                if (type === 'camera') {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const videoElement = document.getElementById('camera-feed');
+                    const videoContainer = document.getElementById('camera-feed-container');
+                    videoElement.srcObject = stream;
+                    videoContainer.classList.remove('hidden', 'opacity-0', 'translate-y-[-20px]');
+                } else if (type === 'mic') {
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                } else if (type === 'notif') {
+                    await Notification.requestPermission();
+                }
+            } catch (e) {
+                console.log("Permission simulée/bloquée", e);
+            }
+            
+            setTimeout(() => {
+                nextStep();
+            }, 800);
         }
 
         function nextStep() {
@@ -221,32 +325,23 @@
         function finishOnboarding() {
             const overlay = document.getElementById('onboarding-overlay');
             const mainApp = document.getElementById('main-app');
-
-            // Fade out overlay
             overlay.classList.add('opacity-0', 'pointer-events-none');
-            
-            // Fade in app
             mainApp.classList.remove('opacity-0', 'blur-sm');
-            
-            // Démarrer la conversation après un court délai
             setTimeout(() => {
-                addBotMessage("Bonjour ! Je suis Muse, votre assistant créatif. Sur quel projet travaillez-vous aujourd'hui ? Un dessin, un roman, ou peut-être une nouvelle startup ?");
+                addBotMessage("Bonjour ! Je suis Muse, votre assistant créatif. Je vois que vous êtes prêt. Sur quel projet travaillez-vous aujourd'hui ?");
             }, 1000);
         }
 
         // --- GESTION DU CHAT ---
-
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
 
-        // Auto-resize textarea
         userInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
             if(this.value === '') this.style.height = 'auto';
         });
 
-        // Envoi avec Entrée (sans shift)
         userInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -257,21 +352,14 @@
         function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
-
-            // 1. Ajouter le message utilisateur
             addUserMessage(text);
             userInput.value = '';
             userInput.style.height = 'auto';
-
-            // 2. Simuler la réflexion du bot
             showTypingIndicator();
-
-            // 3. Réponse du bot (Simulation IA créative)
             setTimeout(() => {
                 removeTypingIndicator();
-                const creativeResponse = generateCreativeResponse(text);
-                addBotMessage(creativeResponse);
-            }, 2000); // 2 secondes de délai pour faire réaliste
+                addBotMessage(generateCreativeResponse(text));
+            }, 2000);
         }
 
         function addUserMessage(text) {
@@ -333,44 +421,25 @@
         }
 
         function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
 
-        // --- SIMULATION D'IA SIMPLE ---
         function generateCreativeResponse(input) {
             const lowerInput = input.toLowerCase();
-            
-            if (lowerInput.includes('bonjour') || lowerInput.includes('salut')) {
-                return "Ravi de vous rencontrer ! Commençons par une petite étincelle : si votre projet avait une couleur, laquelle serait-ce et pourquoi ?";
-            }
-            if (lowerInput.includes('idée') || lowerInput.includes('bloqué')) {
-                return "Le blocage créatif est souvent une porte déguisée. Essayons la technique SCAMPER : que pourriez-vous **inverser** ou **exagérer** dans votre concept actuel pour le rendre surprenant ?";
-            }
-            if (lowerInput.includes('dessin') || lowerInput.includes('visuel')) {
-                return "Intéressant. Imaginez que la lumière vienne d'en bas au lieu d'en haut. Comment cela changerait-il l'ambiance émotionnelle de votre image ?";
-            }
-             if (lowerInput.includes('texte') || lowerInput.includes('écrire')) {
-                return "Et si vous écriviez ce passage du point de vue d'un objet inanimé présent dans la scène ? Qu'est-ce que la chaise ou la lampe 'ressent' à ce moment précis ?";
-            }
+            if (lowerInput.includes('bonjour') || lowerInput.includes('salut')) return "Ravi de vous rencontrer ! Commençons par une petite étincelle : si votre projet avait une couleur, laquelle serait-ce et pourquoi ?";
+            if (lowerInput.includes('idée') || lowerInput.includes('bloqué')) return "Le blocage créatif est souvent une porte déguisée. Essayons la technique SCAMPER : que pourriez-vous **inverser** ou **exagérer** dans votre concept actuel ?";
+            if (lowerInput.includes('dessin') || lowerInput.includes('visuel')) return "Intéressant. Imaginez que la lumière vienne d'en bas au lieu d'en haut. Comment cela changerait-il l'ambiance émotionnelle ?";
             
             const genericPrompts = [
-                "C'est une perspective fascinante. Et si on explorait l'opposé exact de cette idée pendant deux minutes ?",
-                "J'aime cette direction. Pouvez-vous me donner trois adjectifs qui décriraient l'émotion que vous voulez que l'utilisateur ressente ?",
-                "Poussons ça plus loin. Si on devait simplifier ça à l'extrême, qu'est-ce qu'il resterait d'essentiel ?",
+                "C'est une perspective fascinante. Et si on explorait l'opposé exact de cette idée ?",
+                "J'aime cette direction. Pouvez-vous me donner trois adjectifs qui décriraient l'émotion visée ?",
+                "Poussons ça plus loin. Si on simplifiait ça à l'extrême, que resterait-il ?",
                 "Très original ! Comment cela pourrait-il évoluer dans 10 ans ?"
             ];
-            
             return genericPrompts[Math.floor(Math.random() * genericPrompts.length)];
         }
 
-        // Lancer la première étape
         showStep(0);
-
     </script>
 </body>
 </html>
